@@ -10,15 +10,15 @@ This document is the **single source of truth for implementation**. It contains 
 **Goal**: Define the immutable data structures representing the Manaknight language.
 **Dependencies**: None
 **Acceptance Criteria**:
-- [ ] Define all AST nodes from `MANAKNIGHTLANGUAGE.md` (Section 8):
+- [x] Define all AST nodes from `MANAKNIGHTLANGUAGE.md` (Section 8):
     - **Top-Level**: `Program`, `Module`, `ApiRoute`.
     - **Declarations**: `FunctionDecl`, `TypeDecl`, `EffectDecl`, `ImportDecl`.
     - **Statements**: `Block`, `LetStmt`, `ExprStmt`, `IfStmt`, `MatchStmt`.
     - **Expressions**: `Literal`, `IdentifierExpr`, `CallExpr`, `LambdaExpr`, `IfExpr`, `MatchExpr`, `PipeExpr`.
     - **Patterns**: `ConstructorPattern`, `WildcardPattern`.
     - **Types**: `PrimitiveType`, `NamedType`, `GenericType`, `FunctionType`.
-- [ ] AST nodes are strictly typed (TypeScript interfaces/types).
-- [ ] `Program` node contains `Module[]` and `ApiRoute[]`.
+- [x] AST nodes are strictly typed (C structs with unions).
+- [x] `Program` node contains `Module[]` and `ApiRoute[]`.
 
 **Implementation Guide**:
 ```ts
@@ -45,21 +45,21 @@ export interface FunctionDecl {
 **Goal**: Convert source text into a stream of tokens.
 **Dependencies**: None
 **Acceptance Criteria**:
-- [ ] Handles all keywords: `function`, `let`, `if`, `match`, `effect`, `api`, `module` etc.
-- [ ] Handles operators: `|>` (pipe), `->` (arrow), `==` (equality), `!=`, `>=`, `<=`, `+` (string/int).
-- [ ] Handles literals: Integers (Int64 format), Strings (UTF-8).
-- [ ] **Comments**: Strips single-line comments (`//`).
-- [ ] **Path Handling**: API paths (`/users/:id`) must be tokenized correctly (either as a specific token or handled by parser).
-- [ ] Tracks Line/Column for error reporting.
+- [x] Handles all keywords: `function`, `let`, `if`, `match`, `effect`, `api`, `module` etc.
+- [x] Handles operators: `|>` (pipe), `->` (arrow), `==` (equality), `!=`, `>=`, `<=`, `+` (string/int).
+- [x] Handles literals: Integers (Int64 format), Strings (UTF-8).
+- [x] **Comments**: Strips single-line comments (`//`).
+- [x] **Path Handling**: API paths (`/users/:id`) must be tokenized correctly (either as a specific token or handled by parser).
+- [x] Tracks Line/Column for error reporting.
 
 ### Task 1.3: Recursive Descent Parser
 **Goal**: Convert Token stream into AST.
 **Dependencies**: 1.1, 1.2
 **Acceptance Criteria**:
-- [ ] Parses valid source code into correct AST.
-- [ ] Parses `api GET /path` syntax correctly (unique to Manaknight).
-- [ ] Enforces EBNF grammar (e.g., `let` must be followed by `=`).
-- [ ] Rejects invalid syntax with `E1xxx` error codes.
+- [x] Parses valid source code into correct AST.
+- [x] Parses `api GET /path` syntax correctly (unique to Manaknight).
+- [x] Enforces EBNF grammar (e.g., `let` must be followed by `=`).
+- [x] Rejects invalid syntax with `E1xxx` error codes.
 
 **Implementation Guide**:
 ```ts
@@ -92,15 +92,15 @@ class Parser {
 **Goal**: Enforce deterministic source formatting (Spec Section 2).
 **Dependencies**: 1.3
 **Acceptance Criteria**:
-- [ ] `mkc fmt file.mk` outputs canonically formatted code.
-- [ ] **Idempotency**: Running format twice produces identical output (`format(format(x)) == format(x)`).
+- [x] `mkc fmt file.mk` outputs canonically formatted code.
+- [x] **Idempotency**: Running format twice produces identical output (`format(format(x)) == format(x)`).
 
 ### Task 1.5: Error Catalog
 **Goal**: Centralize all error definitions.
 **Dependencies**: None
 **Acceptance Criteria**:
-- [ ] Create `src/compiler/errors.ts`.
-- [ ] Define enum/map for all codes matching Spec Section 10:
+- [x] Create `src/compiler/errors.h` and `src/compiler/errors.c`.
+- [x] Define enum/map for all codes matching Spec Section 10:
     - **E1000-E1999**: Syntax & Parsing (e.g. Unexpected Token).
     - **E2000-E2999**: Type System (e.g. Type Mismatch, Unknown Identifier).
     - **E3000-E3999**: Effect System (e.g. Undeclared Effect, Effect Leakage).
@@ -110,7 +110,7 @@ class Parser {
     - **E7000-E7999**: Runtime (e.g. Invalid Bytecode).
     - **E8000-E8999**: Resource Limits (e.g. Timeout, OOM).
     - **E9000-E9999**: Internal Errors.
-- [ ] Ensure every compiler phase uses this catalog for consistent reporting.
+- [x] Ensure every compiler phase uses this catalog for consistent reporting.
 
 ---
 
@@ -120,33 +120,33 @@ class Parser {
 **Goal**: Define how `import auth.user` maps to file paths.
 **Dependencies**: None
 **Acceptance Criteria**:
-- [ ] Define mapping strategy (e.g., `auth.user` -> `./auth/user.mk`).
-- [ ] Implement `ModuleResolver` class to locate files.
-- [ ] **Recursive Parsing**: Parse imported files recursively to build the complete program AST before Type Checking.
-- [ ] Enforce "No circular dependency" check (E5004).
+- [x] Define mapping strategy (e.g., `auth.user` -> `./auth/user.mk`).
+- [x] Implement `ModuleResolver` class to locate files.
+- [x] **Recursive Parsing**: Parse imported files recursively to build the complete program AST before Type Checking.
+- [x] Enforce "No circular dependency" check (E5004).
 
 ### Task 2.1: Symbol Table & Scope
 **Goal**: Track variable/function declarations and scopes.
 **Dependencies**: 1.3
 **Acceptance Criteria**:
-- [ ] Scopes are nested (Block scope inherits from Function scope).
-- [ ] Shadows are **forbidden** (Error `E2006`).
-- [ ] **Imports**: Handle aliasing (`import foo as bar`) and name conflict detection.
-- [ ] Resolves identifiers to their definition type.
-- [ ] **Prelude**: Automatically import `core.mk` symbols (Option, Result) into the global scope.
+- [x] Scopes are nested (Block scope inherits from Function scope).
+- [x] Shadows are **forbidden** (Error `E2006`).
+- [x] **Imports**: Handle aliasing (`import foo as bar`) and name conflict detection.
+- [x] Resolves identifiers to their definition type.
+- [x] **Prelude**: Automatically import `core.mk` symbols (Option, Result) into the global scope.
 
 ### Task 2.2: Type Checker
 **Goal**: Verify type safety rules.
 **Dependencies**: 2.1
 **Acceptance Criteria**:
-- [ ] `Let`: Infers type of expr.
-- [ ] `Call`: Verifies arg count and types match signature.
-- [ ] `If`: Verifies condition is `Bool` and branches unify.
-- [ ] `Match`: Verifies scrutinee is ADT and branches unify.
-- [ ] **Generics**: Verify type arguments match constraints (if any) or are valid types (e.g. `Option<Int>`).
-- [ ] **Comparisons**: Verify `>` / `<` are only used on `Int` and `String`.
-- [ ] **Control Flow**: Verify all paths return a value (Totality check/E2005).
-- [ ] Returns `E2xxx` errors on failure.
+- [x] `Let`: Infers type of expr.
+- [x] `Call`: Verifies arg count and types match signature.
+- [x] `If`: Verifies condition is `Bool` and branches unify.
+- [x] `Match`: Verifies scrutinee is ADT and branches unify.
+- [x] **Generics**: Verify type arguments match constraints (if any) or are valid types (e.g. `Option<Int>`).
+- [x] **Comparisons**: Verify `>` / `<` are only used on `Int` and `String`.
+- [x] **Control Flow**: Verify all paths return a value (Totality check/E2005).
+- [x] Returns `E2xxx` errors on failure.
 
 ### Task 2.3: Effect Analyzer
 **Goal**: Enforce capability safety.
