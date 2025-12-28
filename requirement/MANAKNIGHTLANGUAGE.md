@@ -408,7 +408,7 @@ api GET /users/:id {
 
 ---
 
-## 8. Compiler Architecture
+## 8. Compiler Architecture & Implementation
 
 ### Pipeline
 1.  **Lexer/Parser** (EBNF) -> AST
@@ -419,6 +419,68 @@ api GET /users/:id {
 6.  **JS Subset Lowering**
 7.  **Bytecode Generation**
 8.  **Sandboxed Execution**
+
+### Recommended Module Layout
+```text
+compiler/
+ ├─ lexer.ts
+ ├─ parser.ts
+ ├─ ast.ts
+ ├─ types.ts
+ ├─ typechecker.ts
+ ├─ effects.ts
+ ├─ ir.ts
+ ├─ lower.ts
+ ├─ jsgen.ts
+ ├─ cli.ts
+```
+
+### Core Compiler Algorithms (Pseudo-Code)
+
+#### 1. Main Loop
+```ts
+function compile(source: string): Bytecode {
+  tokens = lex(source)
+  ast = parse(tokens)
+
+  typedAst = typeCheck(ast)
+  checkedAst = checkEffects(typedAst)
+
+  ir = lowerToIR(checkedAst)
+  js = generateJS(ir)
+
+  bytecode = compileToBytecode(js)
+  return bytecode
+}
+```
+
+#### 2. Type Checker Core
+```ts
+function inferExpr(expr, env): Type {
+  switch expr.kind:
+    case Literal: return expr.type
+    case Identifier: return env.lookup(expr.name)
+    case Call:
+      fnType = inferExpr(expr.fn)
+      checkArgs(fnType, expr.args)
+      return fnType.return
+    case Match:
+      ensureExhaustive(expr)
+      unifyBranches(expr)
+}
+```
+
+#### 3. Effect Checker Core
+```ts
+function inferEffects(expr): Set<Effect> {
+  match expr:
+    Literal        -> {}
+    Call(fn)       -> fn.effects
+    If(a, b)       -> union(a, b)
+    Match(cases)   -> union(cases)
+}
+```
+**Verification**: `inferred ⊆ declared`
 
 ### AST Design (Canonical)
 The AST is the single source of truth.
@@ -615,12 +677,7 @@ function fetchUser(id, __effects) {
 *   Compiles JS IR to deterministic bytecode (e.g., via MicroQuickJS).
 *   Guarantees: Faster startup, no source exposure, ROM deployment.
 *   **Reproducibility**: Identical source + compiler = identical bytecode.
-
-### Compile-Time Forbidden Rules (Hard Errors)
-*   Reassignment, Mutable data structures.
-*   Unhandled patterns, Missing returns.
-*   Undeclared effects, Recursive effects without base case.
-*   Dynamic imports, Reflection.
+*   **Contracts**: Bytecode must include language version, stdlib version, and effect signature hash.
 
 ---
 
@@ -633,6 +690,29 @@ function fetchUser(id, __effects) {
 4.  **Injected Effects**
 5.  **Bytecode Execution**
 6.  **Response Serializer**
+
+### Runtime Binary Layout (Recommended)
+```text
+runtime/
+ ├─ server.c
+ ├─ vm.c
+ ├─ router.c
+ ├─ effects.c
+ ├─ limits.c
+ ├─ response.c
+```
+
+### Bytecode Deployment Layout
+```text
+/app
+ ├─ core.bin        (stdlib + runtime)
+ ├─ modules/
+ │   ├─ auth.bin
+ │   ├─ users.bin
+ ├─ api/
+ │   ├─ get_user.bin
+ │   ├─ create_user.bin
+```
 
 ### Isolation Model
 *   Each request runs in its own VM context.
