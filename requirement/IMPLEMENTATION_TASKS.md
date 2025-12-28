@@ -43,6 +43,7 @@ export interface FunctionDecl {
 - [ ] Handles all keywords: `function`, `let`, `if`, `match`, `effect`, `api`, `module` etc.
 - [ ] Handles operators: `|>` (pipe), `->` (arrow), `==` (equality).
 - [ ] Handles literals: Integers (Int64 format), Strings (UTF-8).
+- [ ] **Path Handling**: API paths (`/users/:id`) must be tokenized correctly (either as a specific token or handled by parser).
 - [ ] Tracks Line/Column for error reporting.
 
 ### Task 1.3: Recursive Descent Parser
@@ -81,9 +82,33 @@ class Parser {
 }
 ```
 
+### Task 1.4: Canonical Formatter
+**Goal**: Enforce deterministic source formatting (Spec Section 2).
+**Dependencies**: 1.3
+**Acceptance Criteria**:
+- [ ] `mkc fmt file.mk` outputs canonically formatted code.
+- [ ] **Idempotency**: Running format twice produces identical output (`format(format(x)) == format(x)`).
+
+### Task 1.5: Error Catalog
+**Goal**: Centralize all error definitions.
+**Dependencies**: None
+**Acceptance Criteria**:
+- [ ] Create `src/compiler/errors.ts`.
+- [ ] Define enum/map for all codes (E1001-E9002) matching Spec Section 10.
+- [ ] Ensure every compiler phase uses this catalog for consistent reporting.
+
 ---
 
 ## Phase 2: Semantics & Verification
+
+### Task 2.0: Module Resolution Strategy
+**Goal**: Define how `import auth.user` maps to file paths.
+**Dependencies**: None
+**Acceptance Criteria**:
+- [ ] Define mapping strategy (e.g., `auth.user` -> `./auth/user.mk`).
+- [ ] Implement `ModuleResolver` class to locate files.
+- [ ] **Recursive Parsing**: Parse imported files recursively to build the complete program AST before Type Checking.
+- [ ] Enforce "No circular dependency" check (E5004).
 
 ### Task 2.1: Symbol Table & Scope
 **Goal**: Track variable/function declarations and scopes.
@@ -91,7 +116,9 @@ class Parser {
 **Acceptance Criteria**:
 - [ ] Scopes are nested (Block scope inherits from Function scope).
 - [ ] Shadows are **forbidden** (Error `E2006`).
+- [ ] **Imports**: Handle aliasing (`import foo as bar`) and name conflict detection.
 - [ ] Resolves identifiers to their definition type.
+- [ ] **Prelude**: Automatically import `core.mk` symbols (Option, Result) into the global scope.
 
 ### Task 2.2: Type Checker
 **Goal**: Verify type safety rules.
@@ -101,6 +128,7 @@ class Parser {
 - [ ] `Call`: Verifies arg count and types match signature.
 - [ ] `If`: Verifies condition is `Bool` and branches unify.
 - [ ] `Match`: Verifies scrutinee is ADT and branches unify.
+- [ ] **Control Flow**: Verify all paths return a value (Totality check/E2005).
 - [ ] Returns `E2xxx` errors on failure.
 
 ### Task 2.3: Effect Analyzer
@@ -141,9 +169,9 @@ function checkEffects(expr: Expr): Set<string> {
 **Goal**: Define how core types map to JS/C.
 **Dependencies**: None
 **Acceptance Criteria**:
-- [ ] Decide mapping for `Int`: `BigInt` (if supported) or Library Class.
-- [ ] Decide mapping for `String`: JS String (UTF-16) vs Uint8Array (UTF-8).
-- [ ] Document this decision as it affects Lowering.
+- [ ] **Int64**: Prefer C-Host implementation if `BigInt` is missing in `mqjs` (for performance).
+- [ ] **String**: JS String (UTF-16) vs Uint8Array (UTF-8). Document decision.
+- [ ] Document these decisions as they affect Lowering.
 
 ### Task 3.1: IR Lowering (Logic)
 **Goal**: Transform Manaknight AST to Safe JS Subset AST.
@@ -152,7 +180,9 @@ function checkEffects(expr: Expr): Set<string> {
 - [ ] `function` -> JS `function`.
 - [ ] `let x = y` -> `const x = y`.
 - [ ] `match` -> `if (x.tag === '...')`.
+- [ ] **ADT Constructors**: Transform constructor calls (e.g., `some(5)`) into tagged objects (`{ tag: 'some', value: 5 }`).
 - [ ] `if` expression -> wrapped IIFE or hoisted var.
+- [ ] **API Routes**: Transform `api GET /path` into runtime registration calls (e.g., `__router.register("GET", "/path", fn)`).
 - [ ] **Recursion**: Ensure tail calls (or loops if optimized) are used to prevent stack overflow if possible, though TCO is not guaranteed by spec.
 
 ### Task 3.2: Effect Injection Lowering
@@ -170,6 +200,8 @@ function checkEffects(expr: Expr): Set<string> {
 - [ ] Output is valid ES5/ES6.
 - [ ] No forbidden constructs (`eval`, `with`, `class`).
 - [ ] Includes `"use strict"`.
+- [ ] **Version Check**: Embeds a check for Runtime Version compatibility (Spec Section 10).
+- [ ] **Metadata**: Emit `export const __meta = { version: '...', effects: [...] }` for Host consumption (Security).
 
 ---
 
@@ -186,11 +218,13 @@ function checkEffects(expr: Expr): Set<string> {
 
 ### Task 4.1: Stdlib Core (Implementation)
 **Goal**: Implement Tier-0 types in JS/Manaknight.
-**Dependencies**: 3.3
+**Dependencies**: 3.3, 3.0
 **Acceptance Criteria**:
 - [ ] **Critical Check**: Verify if target `mqjs` supports `BigInt`. If not, implement `Int64` emulation.
 - [ ] **Critical Check**: Verify String UTF-8 behavior. Implement wrapper if needed to guarantee `length` = codepoints.
-- [ ] `List` and `Map` implementation (structural equality).
+- [ ] **Map**: Implement `Map` with *value semantics* and **Deterministic Iteration** (e.g. sort keys). **DO NOT** use JS `Map` directly.
+- [ ] **Math**: Implement Int64 with overflow checks that trigger a **Host Trap** (not user-catchable exception).
+- [ ] **Json**: Implement `Json` module (parsing/stringifying with boundary checks).
 
 ### Task 4.2: Host Runtime (C)
 **Goal**: Extend `mqjs` to boot the environment.
@@ -198,7 +232,9 @@ function checkEffects(expr: Expr): Set<string> {
 **Acceptance Criteria**:
 - [ ] Creates a JS Context.
 - [ ] Loads the compiled bytecode.
-- [ ] Constructs the `__effects` object with native C function bindings.
+- [ ] **Router**: Implement logic to map incoming HTTP requests (Method/Path) to the correct Bytecode file (Spec Section 5.5).
+- [ ] **Security**: Read the bytecode's Effect Manifest (`__meta`) and inject *only* the declared effects.
+- [ ] Constructs the `__effects` object with native C function bindings (using `JS_NewObject`, `JS_SetPropertyStr` API).
 
 ### Task 4.3: Effect Handlers (C)
 **Goal**: Implement the "dirty" side of effects.
@@ -215,10 +251,12 @@ function checkEffects(expr: Expr): Set<string> {
 
 ### Task 5.1: Compiler CLI (mkc)
 **Goal**: User-facing tool.
-**Dependencies**: 3.3
+**Dependencies**: 3.3, 5.0 (Stdlib)
 **Acceptance Criteria**:
 - [ ] `mkc input.mk -o output.bin` works.
-- [ ] Invokes internal JS emitter -> invokes `mqjs -c` -> outputs bytecode.
+- [ ] Implements **File System Resolution** for imports.
+- [ ] Invokes internal JS emitter -> invokes `mqjs -o` (bytecode flag) -> outputs bytecode.
+- [ ] **Error Reporting**: Outputs errors in JSON/Format defined in Spec Section 10.
 - [ ] Exits with non-zero code on error.
 
 ### Task 5.2: End-to-End Test Suite
