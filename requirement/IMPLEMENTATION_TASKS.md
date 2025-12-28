@@ -201,7 +201,8 @@ function checkEffects(expr: Expr): Set<string> {
 - [ ] No forbidden constructs (`eval`, `with`, `class`).
 - [ ] Includes `"use strict"`.
 - [ ] **Version Check**: Embeds a check for Runtime Version compatibility (Spec Section 10).
-- [ ] **Metadata**: Emit `export const __meta = { version: '...', effects: [...] }` for Host consumption (Security).
+- [ ] **Metadata**: Emit `export const __meta = { version: '...', effects: [...] }` for Host consumption.
+- [ ] **External Imports**: Emit JS `import` statements for dependencies (don't bundle) to allow Host Module Loading.
 
 ---
 
@@ -223,6 +224,7 @@ function checkEffects(expr: Expr): Set<string> {
 - [ ] **Critical Check**: Verify if target `mqjs` supports `BigInt`. If not, implement `Int64` emulation.
 - [ ] **Critical Check**: Verify String UTF-8 behavior. Implement wrapper if needed to guarantee `length` = codepoints.
 - [ ] **Map**: Implement `Map` with *value semantics* and **Deterministic Iteration** (e.g. sort keys). **DO NOT** use JS `Map` directly.
+- [ ] **List**: Implement core ops (`map`, `filter`, `fold`) using **Iteration** (loops) internally to avoid stack overflow on large lists.
 - [ ] **Math**: Implement Int64 with overflow checks that trigger a **Host Trap** (not user-catchable exception).
 - [ ] **Json**: Implement `Json` module (parsing/stringifying with boundary checks).
 
@@ -232,6 +234,8 @@ function checkEffects(expr: Expr): Set<string> {
 **Acceptance Criteria**:
 - [ ] Creates a JS Context.
 - [ ] Loads the compiled bytecode.
+- [ ] **Resource Limits**: Configure `JS_SetMemoryLimit` and `JS_SetInterruptHandler` (for CPU/Timeout) per Spec Section 6.4.
+- [ ] **Module Loader**: Implement `JS_SetModuleLoaderFunc` to resolve and load dependency `.bin` files from disk (Spec Section 5.5).
 - [ ] **Router**: Implement logic to map incoming HTTP requests (Method/Path) to the correct Bytecode file (Spec Section 5.5).
 - [ ] **Security**: Read the bytecode's Effect Manifest (`__meta`) and inject *only* the declared effects.
 - [ ] Constructs the `__effects` object with native C function bindings (using `JS_NewObject`, `JS_SetPropertyStr` API).
