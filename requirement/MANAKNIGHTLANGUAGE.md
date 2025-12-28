@@ -819,6 +819,11 @@ User code cannot modify, store, or introspect these objects.
 *   No internal filenames/addresses.
 *   Returns standard error JSON with safe code/message.
 
+### Debuggability
+*   **Debug Builds**: May include source maps.
+*   **Production Builds**: Never include source text.
+*   **Internal VM Details**: Never exposed to user code.
+
 ---
 
 ## 11. Standard Library
