@@ -1,34 +1,20 @@
-#ifndef FORMATTER_H
-#define FORMATTER_H
+#ifndef MANAKNIGHT_FORMATTER_H
+#define MANAKNIGHT_FORMATTER_H
 
 #include "ast.h"
 #include <stdio.h>
 
-// Formatter structure
+// Formatter
 typedef struct {
-    FILE* output;
+    char* buffer;
+    size_t buffer_size;
+    size_t buffer_capacity;
     int indent_level;
-    bool needs_indent;
 } Formatter;
 
-// Function declarations
-Formatter* create_formatter(FILE* output);
-void free_formatter(Formatter* formatter);
+Formatter* formatter_create(void);
+void formatter_free(Formatter* formatter);
+void formatter_format_program(Formatter* formatter, Program* program);
+char* formatter_get_code(Formatter* formatter);
 
-// Main formatting functions
-void format_program(Formatter* formatter, Program* program);
-void format_module(Formatter* formatter, Module* module);
-void format_api(Formatter* formatter, ApiRoute* api);
-void format_declaration(Formatter* formatter, Decl* decl);
-void format_statement(Formatter* formatter, Stmt* stmt);
-void format_expression(Formatter* formatter, Expr* expr);
-void format_type(Formatter* formatter, Type* type);
-void format_pattern(Formatter* formatter, Pattern* pattern);
-
-// Helper functions
-void indent(Formatter* formatter);
-void newline(Formatter* formatter);
-void write_string(Formatter* formatter, const char* str);
-void write_indent(Formatter* formatter);
-
-#endif // FORMATTER_H
+#endif // MANAKNIGHT_FORMATTER_H

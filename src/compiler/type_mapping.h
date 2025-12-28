@@ -1,0 +1,6 @@
+#ifndef MANAKNIGHT_TYPEXMAPPING_H
+#define MANAKNIGHT_TYPEXMAPPING_H
+
+// TODO: Implement type_mapping.h
+
+#endif // MANAKNIGHT_TYPEXMAPPING_H

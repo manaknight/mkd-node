@@ -25,11 +25,61 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <sys/time.h>
 
+#include "cutils.h"
+#include "mquickjs.h"
 #include "mquickjs_build.h"
 
 /* defined in mqjs_example.c */
 //#define CONFIG_CLASS_EXAMPLE
+
+/* Forward declarations for Manaknight Effects - implemented in mqjs.c */
+
+static const JSPropDef js_time_obj[] = {
+    JS_CFUNC_DEF("now", 0, js_time_now),
+    JS_CFUNC_DEF("unixMillis", 0, js_time_unixMillis),
+    JS_PROP_END,
+};
+
+static const JSPropDef js_random_obj[] = {
+    JS_CFUNC_DEF("int", 1, js_random_int),
+    JS_CFUNC_DEF("bytes", 1, js_random_bytes),
+    JS_PROP_END,
+};
+
+static const JSPropDef js_log_obj[] = {
+    JS_CFUNC_DEF("info", 1, js_log_info),
+    JS_CFUNC_DEF("warn", 1, js_log_warn),
+    JS_CFUNC_DEF("error", 1, js_log_error),
+    JS_PROP_END,
+};
+
+static const JSPropDef js_http_obj[] = {
+    JS_CFUNC_DEF("getHeader", 1, js_http_getHeader),
+    JS_CFUNC_DEF("setHeader", 2, js_http_setHeader),
+    JS_CFUNC_DEF("json", 0, js_http_json),
+    JS_CFUNC_DEF("text", 0, js_http_text),
+    JS_CFUNC_DEF("status", 1, js_http_status),
+    JS_PROP_END,
+};
+
+static const JSClassDef js_time_class = JS_OBJECT_DEF("Time", js_time_obj);
+static const JSClassDef js_random_class = JS_OBJECT_DEF("Random", js_random_obj);
+static const JSClassDef js_log_class = JS_OBJECT_DEF("Log", js_log_obj);
+static const JSClassDef js_http_class = JS_OBJECT_DEF("Http", js_http_obj);
+
+static const JSPropDef js_manaknight_effects[] = {
+    JS_PROP_CLASS_DEF("time", &js_time_class),
+    JS_PROP_CLASS_DEF("random", &js_random_class),
+    JS_PROP_CLASS_DEF("log", &js_log_class),
+    JS_PROP_CLASS_DEF("http", &js_http_class),
+    JS_PROP_END,
+};
+
+static const JSClassDef js_manaknight_effects_obj =
+    JS_OBJECT_DEF("ManaknightEffects", js_manaknight_effects);
 
 static const JSPropDef js_object_proto[] = {
     JS_CFUNC_DEF("hasOwnProperty", 1, js_object_hasOwnProperty),
@@ -224,7 +274,7 @@ static const JSPropDef js_math[] = {
     JS_CFUNC_SPECIAL_DEF("trunc", 1, f_f, js_trunc ),
     JS_CFUNC_SPECIAL_DEF("log2", 1, f_f, js_log2 ),
     JS_CFUNC_SPECIAL_DEF("log10", 1, f_f, js_log10 ),
-    
+
     JS_PROP_END,
 };
 
@@ -371,6 +421,7 @@ static const JSPropDef js_global_object[] = {
 
     JS_PROP_CLASS_DEF("console", &js_console_obj),
     JS_PROP_CLASS_DEF("performance", &js_performance_obj),
+
     JS_CFUNC_DEF("print", 1, js_print),
 #ifdef CONFIG_CLASS_EXAMPLE
     JS_PROP_CLASS_DEF("Rectangle", &js_rectangle_class),
@@ -381,6 +432,10 @@ static const JSPropDef js_global_object[] = {
     JS_CFUNC_DEF("setTimeout", 2, js_setTimeout),
     JS_CFUNC_DEF("clearTimeout", 1, js_clearTimeout),
 #endif
+
+    /* Manaknight Effects */
+    JS_PROP_CLASS_DEF("__effects", &js_manaknight_effects_obj),
+
     JS_PROP_END,
 };
 
