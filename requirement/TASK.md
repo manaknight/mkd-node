@@ -871,3 +871,338 @@ Every feature you excluded:
 * harder to audit
 * harder to reason about
 * harder to scale
+
+You serve Manaknight by running one native process that:
+
+Listens on a port
+
+Loads precompiled bytecode
+
+Executes one VM per request
+
+Enforces memory + CPU limits
+
+Never shares state across requests
+
+Conceptually closer to:
+
+nginx
+
+envoy
+
+WASM runtimes
+than Node.
+
+
+======
+Great question — this is where Manaknight **completely diverges** from the Node/PM2 mental model.
+
+Short answer first, then the real architecture.
+
+---
+
+## TL;DR
+
+> **You do NOT “serve Manaknight with PM2.”**
+> You deploy **a single native runtime binary** that *already is* the server.
+
+PM2 exists to paper over Node’s weaknesses.
+Manaknight is designed so you **don’t need a process manager in the first place**.
+
+---
+
+## 1️⃣ Why PM2 Exists (and Why You Don’t Want It)
+
+PM2 is solving Node problems:
+
+| Node Problem               | PM2 Hack       |
+| -------------------------- | -------------- |
+| Single-threaded event loop | Cluster mode   |
+| Memory leaks               | Auto-restart   |
+| Uncaught exceptions        | Auto-restart   |
+| GC pauses                  | Hope + retries |
+| Shared heap corruption     | Restart        |
+
+PM2’s core job is basically:
+
+> “Restart the process when it misbehaves.”
+
+Manaknight’s runtime is designed so:
+
+> **The process should never misbehave.**
+
+---
+
+## 2️⃣ What “Serving Manaknight” Actually Means
+
+You serve Manaknight by running **one native process** that:
+
+* Listens on a port
+* Loads precompiled bytecode
+* Executes one VM per request
+* Enforces memory + CPU limits
+* Never shares state across requests
+
+Conceptually closer to:
+
+* **nginx**
+* **envoy**
+* **WASM runtimes**
+  than Node.
+
+---
+
+## 3️⃣ The Canonical Manaknight Deployment Model
+
+### Build step (CI)
+
+```text
+manaknightc build
+```
+
+Produces:
+
+```text
+/dist
+ ├─ manaknight-runtime   (native binary)
+ ├─ routes.json
+ ├─ stdlib.qjsc
+ ├─ modules.qjsc
+ └─ api/
+     ├─ get_user.qjsc
+     └─ create_user.qjsc
+```
+
+This directory is **immutable**.
+
+---
+
+### Run step (prod)
+
+```bash
+./manaknight-runtime --config prod.toml
+```
+
+That’s it.
+
+No PM2.
+No Node.
+No cluster hacks.
+
+---
+
+## 4️⃣ How Concurrency Works (Important)
+
+This is the key difference from Node.
+
+### Node concurrency
+
+* One process
+* One event loop
+* Shared heap
+* Async everywhere
+
+### Manaknight concurrency
+
+* One **server process**
+* Many **isolated VMs**
+* One VM per request
+* No shared heap
+* OS-level concurrency
+
+Under the hood, the runtime uses:
+
+* OS threads
+* or a small worker pool
+* or async I/O at the host level
+
+User code **never sees this**.
+
+---
+
+## 5️⃣ Scaling Manaknight (Replacement for PM2)
+
+Here’s how you scale — cleanly.
+
+---
+
+### Option A: OS Process Supervisor (Recommended)
+
+Use the boring, correct tools:
+
+* `systemd`
+* `launchd`
+* `runit`
+* `s6`
+* Kubernetes
+
+Example with `systemd`:
+
+```ini
+[Unit]
+Description=Manaknight API
+After=network.target
+
+[Service]
+ExecStart=/opt/manaknight/manaknight-runtime
+Restart=always
+RestartSec=1
+LimitNOFILE=65535
+MemoryMax=2G
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Why this is enough:
+
+* Process is stable
+* No leaks
+* No crashes
+* Restarts are rare and meaningful
+
+---
+
+### Option B: Container (Very Clean)
+
+```dockerfile
+FROM scratch
+COPY manaknight-runtime /manaknight
+COPY dist /dist
+CMD ["/manaknight"]
+```
+
+Benefits:
+
+* Tiny image
+* No shell
+* No package manager
+* No attack surface
+
+Run with:
+
+* Docker
+* Kubernetes
+* Nomad
+* ECS
+
+---
+
+### Option C: Multiple Instances + Load Balancer
+
+Classic horizontal scaling:
+
+```text
+ALB / NGINX
+   ↓
+Manaknight #1
+Manaknight #2
+Manaknight #3
+```
+
+Because:
+
+* No shared state
+* No sticky sessions
+* Deterministic execution
+
+This is **far simpler than Node clusters**.
+
+---
+
+## 6️⃣ Hot Reload / Zero Downtime Deploys
+
+This replaces PM2’s “reload” feature.
+
+### Strategy: Immutable artifacts
+
+1. Build new bytecode
+2. Start new runtime instance
+3. Shift traffic
+4. Kill old instance
+
+No live code mutation.
+No runtime patching.
+No half-loaded state.
+
+This is exactly how:
+
+* Envoy
+* NGINX
+* WASM runtimes
+  work.
+
+---
+
+## 7️⃣ What About Crashes?
+
+Here’s the honest truth:
+
+### Node
+
+* Crashes are expected
+* PM2 restarts constantly
+* “Uptime” hides instability
+
+### Manaknight
+
+* Crashes are bugs
+* Restarting indicates a real problem
+* Should be rare and actionable
+
+Because:
+
+* User code cannot crash the runtime
+* Effects are bounded
+* Memory is capped
+* Bytecode is validated
+
+---
+
+## 8️⃣ One-Sentence Mental Model
+
+> **Node apps are served *by* a runtime.
+> Manaknight *is* the runtime.**
+
+---
+
+## 9️⃣ Comparison Table (Clear)
+
+| Feature         | Node + PM2 | Manaknight       |
+| --------------- | ---------- | ---------------- |
+| Process manager | Required   | Optional         |
+| Shared heap     | Yes        | No               |
+| Memory leaks    | Common     | Impossible       |
+| Hot reload      | Risky      | Immutable deploy |
+| Isolation       | Weak       | Strong           |
+| Crash recovery  | Restart    | Rare             |
+| Determinism     | No         | Yes              |
+
+---
+
+## 10️⃣ When You *Might* Still Use PM2
+
+Almost never — but if you insist:
+
+* You *can* run `manaknight-runtime` under PM2
+* PM2 will just act like a dumb supervisor
+* You gain nothing over `systemd`
+
+It’s like running `nginx` under PM2 — technically possible, conceptually wrong.
+
+---
+
+## Final Takeaway
+
+> **PM2 exists because Node is fragile.
+> Manaknight is designed so it doesn’t need babysitting.**
+
+If you want next, I can:
+
+* design the exact **runtime CLI flags**
+* show a **Kubernetes deployment**
+* explain graceful shutdown semantics
+* compare Manaknight vs Bun/Deno deploy models
+* write the “Deployment Guide” section for your docs
+
+Just tell me which one you want.
