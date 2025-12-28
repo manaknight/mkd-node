@@ -75,8 +75,8 @@ ifdef CONFIG_ARM32
 MQJS_BUILD_FLAGS=-m32
 endif
 
-PROGS=mqjs$(EXE) example$(EXE)
-TEST_PROGS=dtoa_test libm_test 
+PROGS=mqjs$(EXE) example$(EXE) mkc$(EXE)
+TEST_PROGS=dtoa_test libm_test
 
 all: $(PROGS)
 
@@ -105,6 +105,18 @@ example.o: example_stdlib.h
 example$(EXE): example.o mquickjs.o dtoa.o libm.o cutils.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+# Manaknight Compiler
+COMPILER_OBJS=src/compiler/ast.o src/compiler/errors.o src/compiler/lexer.o \
+              src/compiler/parser.o src/compiler/formatter.o \
+              src/compiler/symbols.o src/compiler/module_resolver.o \
+              src/compiler/type_checker.o src/compiler/effect_analyzer.o \
+              src/compiler/exhaustiveness_checker.o src/compiler/type_mapping.o \
+              src/compiler/ir.o src/compiler/effect_injection.o \
+              src/compiler/js_emitter.o src/compiler/openapi_generator.o
+
+mkc$(EXE): mkc.o $(COMPILER_OBJS) cutils.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
 example_stdlib: example_stdlib.host.o mquickjs_build.host.o
 	$(HOST_CC) $(HOST_LDFLAGS) -o $@ $^
 
@@ -116,6 +128,9 @@ example_stdlib.h: example_stdlib
 
 %.host.o: %.c
 	$(HOST_CC) $(HOST_CFLAGS) -c -o $@ $<
+
+src/compiler/%.o: src/compiler/%.c
+	$(CC) $(CFLAGS) -I. -c -o $@ $<
 
 test: mqjs example
 	./mqjs tests/test_closure.js

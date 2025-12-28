@@ -1,101 +1,98 @@
-#ifndef LEXER_H
-#define LEXER_H
+#ifndef MANAKNIGHT_LEXER_H
+#define MANAKNIGHT_LEXER_H
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 // Token types
 typedef enum {
+    TOK_EOF = 0,
+    TOK_IDENTIFIER,
+    TOK_INT_LITERAL,
+    TOK_STRING_LITERAL,
+    TOK_BOOL_LITERAL,
+    TOK_UNIT_LITERAL,
+
     // Keywords
-    TOKEN_FUNCTION,
-    TOKEN_LET,
-    TOKEN_IF,
-    TOKEN_ELSE,
-    TOKEN_MATCH,
-    TOKEN_EFFECT,
-    TOKEN_API,
-    TOKEN_MODULE,
-    TOKEN_TYPE,
-    TOKEN_USES,
-    TOKEN_FN,
-    TOKEN_TRUE,
-    TOKEN_FALSE,
-    TOKEN_SOME,
-    TOKEN_NONE,
-    TOKEN_OK,
-    TOKEN_ERR,
-
-    // Literals
-    TOKEN_INT_LITERAL,
-    TOKEN_STRING_LITERAL,
-    TOKEN_IDENTIFIER,
-
-    // Operators
-    TOKEN_PLUS,
-    TOKEN_MINUS,
-    TOKEN_STAR,
-    TOKEN_SLASH,
-    TOKEN_MOD,
-    TOKEN_EQUALS,
-    TOKEN_DOUBLE_EQUALS,
-    TOKEN_NOT_EQUALS,
-    TOKEN_LESS,
-    TOKEN_LESS_EQUALS,
-    TOKEN_GREATER,
-    TOKEN_GREATER_EQUALS,
-    TOKEN_NOT,
-    TOKEN_AND,
-    TOKEN_OR,
+    TOK_FN,
+    TOK_LET,
+    TOK_IF,
+    TOK_ELSE,
+    TOK_MATCH,
+    TOK_TYPE,
+    TOK_EFFECT,
+    TOK_IMPORT,
+    TOK_API,
+    TOK_GET,
+    TOK_POST,
+    TOK_PUT,
+    TOK_DELETE,
+    TOK_HEAD,
 
     // Symbols
-    TOKEN_LPAREN,
-    TOKEN_RPAREN,
-    TOKEN_LBRACE,
-    TOKEN_RBRACE,
-    TOKEN_LBRACKET,
-    TOKEN_RBRACKET,
-    TOKEN_COMMA,
-    TOKEN_COLON,
-    TOKEN_SEMICOLON,
-    TOKEN_DOT,
-    TOKEN_PIPE,
-    TOKEN_PIPE_RIGHT,  // |>
-    TOKEN_ARROW,       // ->
-    TOKEN_EQUALS_SIGN, // =
+    TOK_LPAREN,
+    TOK_RPAREN,
+    TOK_LBRACE,
+    TOK_RBRACE,
+    TOK_LBRACKET,
+    TOK_RBRACKET,
+    TOK_COMMA,
+    TOK_COLON,
+    TOK_SEMICOLON,
+    TOK_DOT,
+    TOK_PIPE,
+    TOK_ARROW,
+    TOK_EQUALS,
+    TOK_DOUBLE_EQUALS,
+    TOK_NOT_EQUALS,
+    TOK_LESS,
+    TOK_GREATER,
+    TOK_LESS_EQUALS,
+    TOK_GREATER_EQUALS,
+    TOK_PLUS,
+    TOK_MINUS,
+    TOK_STAR,
+    TOK_SLASH,
+    TOK_PERCENT,
+    TOK_EXCLAMATION,
+    TOK_QUESTION,
+    TOK_AMPERSAND,
+    TOK_DOUBLE_AMPERSAND,
+    TOK_DOUBLE_PIPE,
+    TOK_UNDERSCORE,
 
-    // Special tokens
-    TOKEN_EOF,
-    TOKEN_ERROR,
+    TOK_INVALID
 } TokenType;
 
 // Token structure
 typedef struct {
     TokenType type;
-    const char* lexeme;    // The actual text
-    uint32_t length;       // Length of lexeme
-    uint32_t line;         // Line number (1-based)
-    uint32_t column;       // Column number (1-based)
+    char* text;
+    uint32_t line;
+    uint32_t column;
     union {
         int64_t int_val;
         char* string_val;
-    } literal;
+        bool bool_val;
+    } value;
 } Token;
 
 // Lexer structure
 typedef struct {
     const char* source;
-    uint32_t source_length;
-    uint32_t current;      // Current position in source
-    uint32_t start;        // Start of current token
-    uint32_t line;         // Current line
-    uint32_t column;       // Current column
+    size_t source_len;
+    size_t position;
+    uint32_t line;
+    uint32_t column;
+    Token current_token;
 } Lexer;
 
-// Function declarations
-Lexer* create_lexer(const char* source, uint32_t length);
-void free_lexer(Lexer* lexer);
-Token next_token(Lexer* lexer);
+// Lexer functions
+Lexer* lexer_create(const char* source, const char* filename);
+void lexer_free(Lexer* lexer);
+Token lexer_next_token(Lexer* lexer);
+Token lexer_peek_token(Lexer* lexer);
 const char* token_type_to_string(TokenType type);
-void print_token(Token token);
 
-#endif // LEXER_H
+#endif // MANAKNIGHT_LEXER_H

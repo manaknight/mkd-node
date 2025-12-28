@@ -1,0 +1,6 @@
+#ifndef MANAKNIGHT_EFFECTXANALYZER_H
+#define MANAKNIGHT_EFFECTXANALYZER_H
+
+// TODO: Implement effect_analyzer.h
+
+#endif // MANAKNIGHT_EFFECTXANALYZER_H

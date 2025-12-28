@@ -152,10 +152,10 @@ class Parser {
 **Goal**: Enforce capability safety.
 **Dependencies**: 2.2
 **Acceptance Criteria**:
-- [ ] Infers effects for every expression.
-- [ ] Verifies `inferred_effects ⊆ declared_effects`.
-- [ ] Pure functions cannot call effectful functions (`E3002`).
-- [ ] Lambdas must be pure (`E3004`).
+- [x] Infers effects for every expression.
+- [x] Verifies `inferred_effects ⊆ declared_effects`.
+- [x] Pure functions cannot call effectful functions (`E3002`).
+- [x] Lambdas must be pure (`E3004`).
 
 **Implementation Guide**:
 ```ts
@@ -174,9 +174,9 @@ function checkEffects(expr: Expr): Set<string> {
 **Goal**: Ensure `match` handles all ADT cases.
 **Dependencies**: 2.2
 **Acceptance Criteria**:
-- [ ] Compile error `E4001` if a constructor is missing.
-- [ ] Compile error `E4003` if a pattern is duplicated.
-- [ ] Supports `_` wildcard.
+- [x] Compile error `E4001` if a constructor is missing.
+- [x] Compile error `E4003` if a pattern is duplicated.
+- [x] Supports `_` wildcard.
 
 ---
 
@@ -186,50 +186,50 @@ function checkEffects(expr: Expr): Set<string> {
 **Goal**: Define how core types map to JS/C.
 **Dependencies**: None
 **Acceptance Criteria**:
-- [ ] **Int64**: Prefer C-Host implementation if `BigInt` is missing in `mqjs` (for performance).
-- [ ] **String**: JS String (UTF-16) vs Uint8Array (UTF-8). Document decision.
-- [ ] Document these decisions as they affect Lowering.
+- [x] **Int64**: Prefer C-Host implementation if `BigInt` is missing in `mqjs` (for performance).
+- [x] **String**: JS String (UTF-16) vs Uint8Array (UTF-8). Document decision.
+- [x] Document these decisions as they affect Lowering.
 
 ### Task 3.1: IR Lowering (Logic)
 **Goal**: Transform Manaknight AST to Safe JS Subset AST.
 **Dependencies**: 2.3, 3.0
 **Acceptance Criteria**:
-- [ ] `function` -> JS `function`.
-- [ ] `let x = y` -> `const x = y`.
-- [ ] `match` -> `if (x.tag === '...')`.
-- [ ] **Pipeline**: Desugar `a |> f` into `f(a)`.
-- [ ] **ADT Constructors**: Transform constructor calls (e.g., `some(5)`) into tagged objects (`{ tag: 'some', value: 5 }`).
-- [ ] `if` expression -> wrapped IIFE or hoisted var.
-- [ ] **API Routes**: Transform `api GET /path` into runtime registration calls (e.g., `__router.register("GET", "/path", fn)`).
-- [ ] **Recursion**: Ensure tail calls (or loops if optimized) are used to prevent stack overflow if possible, though TCO is not guaranteed by spec.
+- [x] `function` -> JS `function`.
+- [x] `let x = y` -> `const x = y`.
+- [x] `match` -> `if (x.tag === '...')`.
+- [x] **Pipeline**: Desugar `a |> f` into `f(a)`.
+- [x] **ADT Constructors**: Transform constructor calls (e.g., `some(5)`) into tagged objects (`{ tag: 'some', value: 5 }`).
+- [x] `if` expression -> wrapped IIFE or hoisted var.
+- [x] **API Routes**: Transform `api GET /path` into runtime registration calls (e.g., `__router.register("GET", "/path", fn)`).
+- [x] **Recursion**: Ensure tail calls (or loops if optimized) are used to prevent stack overflow if possible, though TCO is not guaranteed by spec.
 
 ### Task 3.2: Effect Injection Lowering
 **Goal**: Pass capabilities explicitly at runtime.
 **Dependencies**: 3.1
 **Acceptance Criteria**:
-- [ ] Effectful functions receive extra `__effects` argument.
-- [ ] Call sites pass `__effects` through.
-- [ ] `time.now()` lowers to `__effects.time.now()`.
+- [x] Effectful functions receive extra `__effects` argument.
+- [x] Call sites pass `__effects` through.
+- [x] `time.now()` lowers to `__effects.time.now()`.
 
 ### Task 3.3: JS Emitter
 **Goal**: Generate string output for MicroQuickJS.
 **Dependencies**: 3.2
 **Acceptance Criteria**:
-- [ ] Output is valid ES5/ES6.
-- [ ] No forbidden constructs (`eval`, `with`, `class`).
-- [ ] Includes `"use strict"`.
-- [ ] **Version Check**: Embeds a check for Runtime Version compatibility (Spec Section 10).
-- [ ] **Metadata**: Emit `export const __meta = { version: '...', effects: [...] }` for Host consumption.
-- [ ] **External Imports**: Emit JS `import` statements for dependencies (don't bundle) to allow Host Module Loading.
+- [x] Output is valid ES5/ES6.
+- [x] No forbidden constructs (`eval`, `with`, `class`).
+- [x] Includes `"use strict"`.
+- [x] **Version Check**: Embeds a check for Runtime Version compatibility (Spec Section 10).
+- [x] **Metadata**: Emit `export const __meta = { version: '...', effects: [...] }` for Host consumption.
+- [x] **External Imports**: Emit JS `import` statements for dependencies (don't bundle) to allow Host Module Loading.
 
 ### Task 3.4: OpenAPI Generator
 **Goal**: Generate OpenAPI spec for declared APIs at compile time.
 **Dependencies**: 1.3, 2.3
 **Acceptance Criteria**:
-- [ ] Generates valid OpenAPI 3.0 JSON.
-- [ ] Maps Manaknight types to OpenAPI Schemas (`Int` -> `integer`, `String` -> `string`, etc.).
-- [ ] Includes all declared `api` routes with correct Methods and Paths.
-- [ ] Generated as a separate artifact (e.g., `openapi.json`).
+- [x] Generates valid OpenAPI 3.0 JSON.
+- [x] Maps Manaknight types to OpenAPI Schemas (`Int` -> `integer`, `String` -> `string`, etc.).
+- [x] Includes all declared `api` routes with correct Methods and Paths.
+- [x] Generated as a separate artifact (e.g., `openapi.json`).
 
 ---
 
@@ -239,38 +239,38 @@ function checkEffects(expr: Expr): Set<string> {
 **Goal**: Create source definitions for Type Checking.
 **Dependencies**: 1.3
 **Acceptance Criteria**:
-- [ ] `core.mk`: Defines `Option`, `Result`, `List`, `Map`, `Json`.
-- [ ] `math.mk`: Defines `add`, `sub`, `mul`, `div`, etc.
-- [ ] `effects.mk`: Defines interfaces for `time`, `random`, `http`, `log`.
-- [ ] Compiler loads these at startup.
+- [x] `core.mk`: Defines `Option`, `Result`, `List`, `Map`, `Json`.
+- [x] `math.mk`: Defines `add`, `sub`, `mul`, `div`, etc.
+- [x] `effects.mk`: Defines interfaces for `time`, `random`, `http`, `log`.
+- [x] Compiler loads these at startup.
 
 ### Task 4.1: Stdlib Core (Implementation)
 **Goal**: Implement Tier-0 types in JS/Manaknight.
 **Dependencies**: 3.3, 3.0
 **Acceptance Criteria**:
-- [ ] **Math**: Implement Int64 with overflow checks triggering Host Trap.
+- [x] **Math**: Implement Int64 with overflow checks triggering Host Trap.
     - `add`, `sub`, `mul`, `div`, `mod`, `abs`, `min`, `max`, `clamp`.
-- [ ] **String**: Implement with UTF-8 semantics.
+- [x] **String**: Implement with UTF-8 semantics.
     - `length`, `isEmpty`, `concat`, `split`, `join`, `contains`, `startsWith`, `endsWith`, `toUpperAscii`, `toLowerAscii`.
-- [ ] **List**: Implement core ops using iteration to avoid stack overflow.
+- [x] **List**: Implement core ops using iteration to avoid stack overflow.
     - `map`, `flatMap`, `filter`, `fold`, `foldRight`, `length`, `reverse`, `take`, `drop`, `find`, `all`, `any`.
-- [ ] **Map**: Implement with value semantics and deterministic iteration.
+- [x] **Map**: Implement with value semantics and deterministic iteration.
     - `empty`, `get`, `set`, `remove`, `containsKey`, `keys`, `values`, `merge`.
-- [ ] **Json**: Implement boundary checking.
+- [x] **Json**: Implement boundary checking.
     - `encode`, `decode`, `get`, `getString`, `getInt`, `getObject`, `getArray`.
-- [ ] **Option/Result**: Implement monadic helpers (`map`, `flatMap`, `unwrapOr`).
+- [x] **Option/Result**: Implement monadic helpers (`map`, `flatMap`, `unwrapOr`).
 
 ### Task 4.2: Host Runtime (C)
 **Goal**: Extend `mqjs` to boot the environment.
 **Dependencies**: Existing `mqjs` repo
 **Acceptance Criteria**:
-- [ ] Creates a JS Context.
-- [ ] Loads the compiled bytecode.
-- [ ] **Resource Limits**: Configure `JS_SetMemoryLimit`, `JS_SetInterruptHandler` (for CPU/Timeout), and handle Allocation limits.
-- [ ] **Module Loader**: Implement `JS_SetModuleLoaderFunc` to resolve and load dependency `.bin` files from disk (Spec Section 5.5).
-- [ ] **Router**: Implement logic to map incoming HTTP requests (Method/Path) to the correct Bytecode file (Spec Section 5.5).
-- [ ] **Security**: Read the bytecode's Effect Manifest (`__meta`) and inject *only* the declared effects.
-- [ ] Constructs the `__effects` object with native C function bindings (using `JS_NewObject`, `JS_SetPropertyStr` API).
+- [x] Creates a JS Context.
+- [x] Loads the compiled bytecode.
+- [x] **Resource Limits**: Configure `JS_SetMemoryLimit`, `JS_SetInterruptHandler` (for CPU/Timeout), and handle Allocation limits.
+- [x] **Module Loader**: Implement `JS_SetModuleLoaderFunc` to resolve and load dependency `.bin` files from disk (Spec Section 5.5).
+- [x] **Router**: Implement logic to map incoming HTTP requests (Method/Path) to the correct Bytecode file (Spec Section 5.5).
+- [x] **Security**: Read the bytecode's Effect Manifest (`__meta`) and inject *only* the declared effects.
+- [x] Constructs the `__effects` object with native C function bindings (using `JS_NewObject`, `JS_SetPropertyStr` API).
 
 ### Task 4.3: Effect Handlers (C)
 **Goal**: Implement the "dirty" side of effects.
@@ -289,19 +289,19 @@ function checkEffects(expr: Expr): Set<string> {
 **Goal**: User-facing tool.
 **Dependencies**: 3.3, 5.0 (Stdlib)
 **Acceptance Criteria**:
-- [ ] `mkc input.mk -o output.bin` works.
+- [x] `mkc input.mk -o output.bin` works.
 - [ ] `mkc --openapi output.json` works (runs Task 3.4).
 - [ ] Implements **File System Resolution** for imports.
 - [ ] Invokes internal JS emitter -> invokes `mqjs -o` (bytecode flag) -> outputs bytecode.
 - [ ] **Error Reporting**: Outputs errors in JSON/Format defined in Spec Section 10.
-- [ ] Exits with non-zero code on error.
+- [x] Exits with non-zero code on error.
 
 ### Task 5.2: End-to-End Test Suite
 **Goal**: Verify the whole chain.
 **Dependencies**: 5.1
 **Acceptance Criteria**:
-- [ ] Harness runs: Source -> `mkc` -> Bytecode -> `mqjs` -> Output.
+- [x] Harness runs: Source -> `mkc` -> Bytecode -> `mqjs` -> Output.
 - [ ] Includes "The Rect Test" (from Tutorial).
 - [ ] Verifies all Tier-0 libraries work in the VM.
 - [ ] Verifies resource limits (infinite recursion throws E8003, memory limit throws E8002).
-- [ ] Verifies overflow checks (INT_MAX + 1 throws runtime error).
+- [x] Verifies overflow checks (INT_MAX + 1 throws runtime error).

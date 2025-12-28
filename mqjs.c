@@ -46,7 +46,7 @@ static JSValue js_print(JSContext *ctx, JSValue *this_val, int argc, JSValue *ar
 {
     int i;
     JSValue v;
-    
+
     for(i = 0; i < argc; i++) {
         if (i != 0)
             putchar(' ');
@@ -68,6 +68,180 @@ static JSValue js_print(JSContext *ctx, JSValue *this_val, int argc, JSValue *ar
 static JSValue js_gc(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
 {
     JS_GC(ctx);
+    return JS_UNDEFINED;
+}
+
+/* Manaknight Effect Handlers */
+
+static JSValue js_time_now(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    double ms = (double)tv.tv_sec * 1000.0 + (double)tv.tv_usec / 1000.0;
+    return JS_NewFloat64(ctx, ms);
+}
+
+static JSValue js_time_unixMillis(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    int64_t ms = (int64_t)tv.tv_sec * 1000LL + (int64_t)tv.tv_usec / 1000LL;
+    return JS_NewInt64(ctx, ms);
+}
+
+static JSValue js_random_int(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    int32_t max = INT32_MAX;
+    if (argc >= 1) {
+        int32_t val;
+        if (JS_ToInt32(ctx, &val, argv[0]) == 0) {
+            max = val;
+        }
+    }
+    int32_t result = rand() % max;
+    return JS_NewInt32(ctx, result);
+}
+
+static JSValue js_random_bytes(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "random.bytes requires length argument");
+    }
+
+    int32_t length;
+    if (JS_ToInt32(ctx, &length, argv[0]) != 0) {
+        return JS_ThrowTypeError(ctx, "length must be an integer");
+    }
+
+    if (length < 0 || length > 1024) {
+        return JS_ThrowRangeError(ctx, "length must be between 0 and 1024");
+    }
+
+    // For now, return a simple value
+    // In a real implementation, this would return random bytes
+    return JS_NewString(ctx, "random_bytes_placeholder");
+}
+
+static JSValue js_log_info(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    printf("[INFO] ");
+    for (int i = 0; i < argc; i++) {
+        if (i > 0) printf(" ");
+        if (JS_IsString(ctx, argv[i])) {
+            JSCStringBuf buf;
+            const char *str;
+            size_t len;
+            str = JS_ToCStringLen(ctx, &len, argv[i], &buf);
+            fwrite(str, 1, len, stdout);
+        } else {
+            JS_PrintValue(ctx, argv[i]);
+        }
+    }
+    printf("\n");
+    return JS_UNDEFINED;
+}
+
+static JSValue js_log_warn(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    printf("[WARN] ");
+    for (int i = 0; i < argc; i++) {
+        if (i > 0) printf(" ");
+        if (JS_IsString(ctx, argv[i])) {
+            JSCStringBuf buf;
+            const char *str;
+            size_t len;
+            str = JS_ToCStringLen(ctx, &len, argv[i], &buf);
+            fwrite(str, 1, len, stdout);
+        } else {
+            JS_PrintValue(ctx, argv[i]);
+        }
+    }
+    printf("\n");
+    return JS_UNDEFINED;
+}
+
+static JSValue js_log_error(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    fprintf(stderr, "[ERROR] ");
+    for (int i = 0; i < argc; i++) {
+        if (i > 0) fprintf(stderr, " ");
+        if (JS_IsString(ctx, argv[i])) {
+            JSCStringBuf buf;
+            const char *str;
+            size_t len;
+            str = JS_ToCStringLen(ctx, &len, argv[i], &buf);
+            fwrite(str, 1, len, stderr);
+        } else {
+            JS_PrintValue(ctx, argv[i]);
+        }
+    }
+    fprintf(stderr, "\n");
+    return JS_UNDEFINED;
+}
+
+static JSValue js_http_getHeader(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    // For now, return a dummy header value
+    // In a real implementation, this would access HTTP request headers
+    if (argc >= 1) {
+        if (JS_IsString(ctx, argv[0])) {
+            // Return a dummy value for demonstration
+            return JS_NewString(ctx, "dummy-header-value");
+        }
+    }
+    return JS_NewString(ctx, "");
+}
+
+static JSValue js_http_setHeader(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    // For now, just log the header setting
+    // In a real implementation, this would set HTTP response headers
+    if (argc >= 2) {
+        printf("[HTTP] Setting header ");
+        if (JS_IsString(ctx, argv[0])) {
+            JSCStringBuf buf1;
+            const char *name;
+            size_t len1;
+            name = JS_ToCStringLen(ctx, &len1, argv[0], &buf1);
+            fwrite(name, 1, len1, stdout);
+        }
+        printf(": ");
+        if (JS_IsString(ctx, argv[1])) {
+            JSCStringBuf buf2;
+            const char *value;
+            size_t len2;
+            value = JS_ToCStringLen(ctx, &len2, argv[1], &buf2);
+            fwrite(value, 1, len2, stdout);
+        }
+        printf("\n");
+    }
+    return JS_UNDEFINED;
+}
+
+static JSValue js_http_json(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    // For now, return a dummy JSON response
+    // In a real implementation, this would return JSON response body
+    return JS_NewString(ctx, "{\"status\": \"ok\"}");
+}
+
+static JSValue js_http_text(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    // For now, return a dummy text response
+    // In a real implementation, this would return text response body
+    return JS_NewString(ctx, "Hello from HTTP response");
+}
+
+static JSValue js_http_status(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    // For now, just log the status
+    // In a real implementation, this would set HTTP response status
+    if (argc >= 1) {
+        int32_t status;
+        if (JS_ToInt32(ctx, &status, argv[0]) == 0) {
+            printf("[HTTP] Setting status: %d\n", status);
+        }
+    }
     return JS_UNDEFINED;
 }
 
@@ -107,7 +281,7 @@ static JSValue js_load(JSContext *ctx, JSValue *this_val, int argc, JSValue *arg
     uint8_t *buf;
     int buf_len;
     JSValue ret;
-    
+
     filename = JS_ToCString(ctx, argv[0], &buf_str);
     if (!filename)
         return JS_EXCEPTION;
@@ -134,7 +308,7 @@ static JSValue js_setTimeout(JSContext *ctx, JSValue *this_val, int argc, JSValu
     JSTimer *th;
     int delay, i;
     JSValue *pfunc;
-    
+
     if (!JS_IsFunction(ctx, argv[0]))
         return JS_ThrowTypeError(ctx, "not a function");
     if (JS_ToInt32(ctx, &delay, argv[1]))
@@ -193,10 +367,10 @@ static void run_timers(JSContext *ctx)
                         goto fail;
                     JS_PushArg(ctx, th->func.val); /* func name */
                     JS_PushArg(ctx, JS_NULL); /* this */
-                    
+
                     JS_DeleteGCRef(ctx, &th->func);
                     th->allocated = FALSE;
-                    
+
                     ret = JS_Call(ctx, 0);
                     if (JS_IsException(ret)) {
                     fail:
@@ -280,7 +454,7 @@ static int eval_buf(JSContext *ctx, const char *eval_str, const char *filename, 
 {
     JSValue val;
     int flags;
-    
+
     flags = parse_flags;
     if (is_repl)
         flags |= JS_EVAL_RETVAL | JS_EVAL_REPL;
@@ -310,7 +484,7 @@ static int eval_file(JSContext *ctx, const char *filename,
     uint8_t *buf;
     int ret, buf_len;
     JSValue val;
-    
+
     buf = load_file(filename, &buf_len);
     if (allow_bytecode && JS_IsBytecode(buf, buf_len)) {
         if (JS_RelocateBytecode(ctx, buf, buf_len)) {
@@ -328,7 +502,7 @@ static int eval_file(JSContext *ctx, const char *filename,
         JSValue obj, arr;
         JSGCRef arr_ref, val_ref;
         int i;
-        
+
         JS_PUSH_VALUE(ctx, val);
         /* must be defined after JS_LoadBytecode() */
         arr = JS_NewArray(ctx, argc);
@@ -342,8 +516,8 @@ static int eval_file(JSContext *ctx, const char *filename,
         JS_SetPropertyStr(ctx, obj, "scriptArgs", arr);
         JS_POP_VALUE(ctx, val);
     }
-    
-    
+
+
     val = JS_Run(ctx, val);
     if (JS_IsException(val)) {
     exception:
@@ -373,7 +547,7 @@ static void compile_file(const char *filename, const char *outfilename,
     const uint8_t *data_buf;
     uint32_t data_len;
     FILE *f;
-    
+
     /* When compiling to a file, the actual content of the stdlib does
        not matter because the generated bytecode does not depend on
        it. We still need it so that the atoms for the parsing are
@@ -392,7 +566,7 @@ static void compile_file(const char *filename, const char *outfilename,
         return;
     }
 
-#if JSW == 8 
+#if JSW == 8
     if (force_32bit) {
         if (JS_PrepareBytecode64to32(ctx, &hdr_buf.hdr32, &data_buf, &data_len, val)) {
             fprintf(stderr, "Could not convert the bytecode from 64 to 32 bits\n");
@@ -403,10 +577,10 @@ static void compile_file(const char *filename, const char *outfilename,
 #endif
     {
         JS_PrepareBytecode(ctx, &hdr_buf.hdr, &data_buf, &data_len, val);
-        
+
         if (dump_memory)
             JS_DumpMemory(ctx, (dump_memory >= 2));
-        
+
         /* Relocate to zero to have a deterministic
            output. JS_DumpMemory() cannot work once the heap is relocated,
            so we relocate after it. */
@@ -421,7 +595,7 @@ static void compile_file(const char *filename, const char *outfilename,
     fwrite(&hdr_buf, 1, hdr_len, f);
     fwrite(data_buf, 1, data_len, f);
     fclose(f);
-    
+
     JS_FreeContext(ctx);
     free(mem_buf);
 }
@@ -443,7 +617,7 @@ static BOOL is_word(int c)
         c == '_' || c == '$';
 }
 
-static const char js_keywords[] = 
+static const char js_keywords[] =
     "break|case|catch|continue|debugger|default|delete|do|"
     "else|finally|for|function|if|in|instanceof|new|"
     "return|switch|this|throw|try|typeof|while|with|"
@@ -595,13 +769,13 @@ int main(int argc, const char **argv)
     JSContext *ctx;
     int i, parse_flags;
     BOOL force_32bit, allow_bytecode;
-    
+
     mem_size = 16 << 20;
     dump_memory = 0;
     parse_flags = 0;
     force_32bit = FALSE;
     allow_bytecode = FALSE;
-    
+
     /* cannot use getopt because we want to pass the command line to
        the script */
     optind = 1;
@@ -741,7 +915,7 @@ int main(int argc, const char **argv)
                 goto fail;
             }
         }
-        
+
         if (expr) {
             if (eval_buf(ctx, expr, "<cmdline>", FALSE, parse_flags | JS_EVAL_REPL))
                 goto fail;
@@ -753,16 +927,16 @@ int main(int argc, const char **argv)
                 goto fail;
             }
         }
-        
+
         if (interactive) {
             repl_run(ctx);
         } else {
             run_timers(ctx);
         }
-        
+
         if (dump_memory)
             JS_DumpMemory(ctx, (dump_memory >= 2));
-        
+
         JS_FreeContext(ctx);
         free(mem_buf);
     }
