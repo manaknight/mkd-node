@@ -10,10 +10,15 @@ This document is the **single source of truth for implementation**. It contains 
 **Goal**: Define the immutable data structures representing the Manaknight language.
 **Dependencies**: None
 **Acceptance Criteria**:
-- [ ] All AST nodes defined in `MANAKNIGHTLANGUAGE.md` (Section 8) are present.
-- [ ] AST nodes are strictly typed.
+- [ ] Define all AST nodes from `MANAKNIGHTLANGUAGE.md` (Section 8):
+    - **Top-Level**: `Program`, `Module`, `ApiRoute`.
+    - **Declarations**: `FunctionDecl`, `TypeDecl`, `EffectDecl`, `ImportDecl`.
+    - **Statements**: `Block`, `LetStmt`, `ExprStmt`, `IfStmt`, `MatchStmt`.
+    - **Expressions**: `Literal`, `IdentifierExpr`, `CallExpr`, `LambdaExpr`, `IfExpr`, `MatchExpr`, `PipeExpr`.
+    - **Patterns**: `ConstructorPattern`, `WildcardPattern`.
+    - **Types**: `PrimitiveType`, `NamedType`, `GenericType`, `FunctionType`.
+- [ ] AST nodes are strictly typed (TypeScript interfaces/types).
 - [ ] `Program` node contains `Module[]` and `ApiRoute[]`.
-- [ ] `Module` contains `Declaration[]` (Function, Type, Effect, Import).
 
 **Implementation Guide**:
 ```ts
@@ -41,8 +46,9 @@ export interface FunctionDecl {
 **Dependencies**: None
 **Acceptance Criteria**:
 - [ ] Handles all keywords: `function`, `let`, `if`, `match`, `effect`, `api`, `module` etc.
-- [ ] Handles operators: `|>` (pipe), `->` (arrow), `==` (equality).
+- [ ] Handles operators: `|>` (pipe), `->` (arrow), `==` (equality), `!=`, `>=`, `<=`, `+` (string/int).
 - [ ] Handles literals: Integers (Int64 format), Strings (UTF-8).
+- [ ] **Comments**: Strips single-line comments (`//`).
 - [ ] **Path Handling**: API paths (`/users/:id`) must be tokenized correctly (either as a specific token or handled by parser).
 - [ ] Tracks Line/Column for error reporting.
 
@@ -94,7 +100,16 @@ class Parser {
 **Dependencies**: None
 **Acceptance Criteria**:
 - [ ] Create `src/compiler/errors.ts`.
-- [ ] Define enum/map for all codes (E1001-E9002) matching Spec Section 10.
+- [ ] Define enum/map for all codes matching Spec Section 10:
+    - **E1000-E1999**: Syntax & Parsing (e.g. Unexpected Token).
+    - **E2000-E2999**: Type System (e.g. Type Mismatch, Unknown Identifier).
+    - **E3000-E3999**: Effect System (e.g. Undeclared Effect, Effect Leakage).
+    - **E4000-E4999**: Pattern Matching (e.g. Non-Exhaustive).
+    - **E5000-E5999**: Modules (e.g. Circular Dependency).
+    - **E6000-E6999**: API Definitions (e.g. Invalid Method).
+    - **E7000-E7999**: Runtime (e.g. Invalid Bytecode).
+    - **E8000-E8999**: Resource Limits (e.g. Timeout, OOM).
+    - **E9000-E9999**: Internal Errors.
 - [ ] Ensure every compiler phase uses this catalog for consistent reporting.
 
 ---
@@ -128,6 +143,8 @@ class Parser {
 - [ ] `Call`: Verifies arg count and types match signature.
 - [ ] `If`: Verifies condition is `Bool` and branches unify.
 - [ ] `Match`: Verifies scrutinee is ADT and branches unify.
+- [ ] **Generics**: Verify type arguments match constraints (if any) or are valid types (e.g. `Option<Int>`).
+- [ ] **Comparisons**: Verify `>` / `<` are only used on `Int` and `String`.
 - [ ] **Control Flow**: Verify all paths return a value (Totality check/E2005).
 - [ ] Returns `E2xxx` errors on failure.
 
@@ -180,6 +197,7 @@ function checkEffects(expr: Expr): Set<string> {
 - [ ] `function` -> JS `function`.
 - [ ] `let x = y` -> `const x = y`.
 - [ ] `match` -> `if (x.tag === '...')`.
+- [ ] **Pipeline**: Desugar `a |> f` into `f(a)`.
 - [ ] **ADT Constructors**: Transform constructor calls (e.g., `some(5)`) into tagged objects (`{ tag: 'some', value: 5 }`).
 - [ ] `if` expression -> wrapped IIFE or hoisted var.
 - [ ] **API Routes**: Transform `api GET /path` into runtime registration calls (e.g., `__router.register("GET", "/path", fn)`).
@@ -204,6 +222,15 @@ function checkEffects(expr: Expr): Set<string> {
 - [ ] **Metadata**: Emit `export const __meta = { version: '...', effects: [...] }` for Host consumption.
 - [ ] **External Imports**: Emit JS `import` statements for dependencies (don't bundle) to allow Host Module Loading.
 
+### Task 3.4: OpenAPI Generator
+**Goal**: Generate OpenAPI spec for declared APIs at compile time.
+**Dependencies**: 1.3, 2.3
+**Acceptance Criteria**:
+- [ ] Generates valid OpenAPI 3.0 JSON.
+- [ ] Maps Manaknight types to OpenAPI Schemas (`Int` -> `integer`, `String` -> `string`, etc.).
+- [ ] Includes all declared `api` routes with correct Methods and Paths.
+- [ ] Generated as a separate artifact (e.g., `openapi.json`).
+
 ---
 
 ## Phase 4: Standard Library & Runtime
@@ -212,8 +239,8 @@ function checkEffects(expr: Expr): Set<string> {
 **Goal**: Create source definitions for Type Checking.
 **Dependencies**: 1.3
 **Acceptance Criteria**:
-- [ ] `core.mk`: Defines `Option`, `Result`, `List`, `Map`.
-- [ ] `math.mk`: Defines `add`, `sub`, etc.
+- [ ] `core.mk`: Defines `Option`, `Result`, `List`, `Map`, `Json`.
+- [ ] `math.mk`: Defines `add`, `sub`, `mul`, `div`, etc.
 - [ ] `effects.mk`: Defines interfaces for `time`, `random`, `http`, `log`.
 - [ ] Compiler loads these at startup.
 
@@ -221,12 +248,17 @@ function checkEffects(expr: Expr): Set<string> {
 **Goal**: Implement Tier-0 types in JS/Manaknight.
 **Dependencies**: 3.3, 3.0
 **Acceptance Criteria**:
-- [ ] **Critical Check**: Verify if target `mqjs` supports `BigInt`. If not, implement `Int64` emulation.
-- [ ] **Critical Check**: Verify String UTF-8 behavior. Implement wrapper if needed to guarantee `length` = codepoints.
-- [ ] **Map**: Implement `Map` with *value semantics* and **Deterministic Iteration** (e.g. sort keys). **DO NOT** use JS `Map` directly.
-- [ ] **List**: Implement core ops (`map`, `filter`, `fold`) using **Iteration** (loops) internally to avoid stack overflow on large lists.
-- [ ] **Math**: Implement Int64 with overflow checks that trigger a **Host Trap** (not user-catchable exception).
-- [ ] **Json**: Implement `Json` module (parsing/stringifying with boundary checks).
+- [ ] **Math**: Implement Int64 with overflow checks triggering Host Trap.
+    - `add`, `sub`, `mul`, `div`, `mod`, `abs`, `min`, `max`, `clamp`.
+- [ ] **String**: Implement with UTF-8 semantics.
+    - `length`, `isEmpty`, `concat`, `split`, `join`, `contains`, `startsWith`, `endsWith`, `toUpperAscii`, `toLowerAscii`.
+- [ ] **List**: Implement core ops using iteration to avoid stack overflow.
+    - `map`, `flatMap`, `filter`, `fold`, `foldRight`, `length`, `reverse`, `take`, `drop`, `find`, `all`, `any`.
+- [ ] **Map**: Implement with value semantics and deterministic iteration.
+    - `empty`, `get`, `set`, `remove`, `containsKey`, `keys`, `values`, `merge`.
+- [ ] **Json**: Implement boundary checking.
+    - `encode`, `decode`, `get`, `getString`, `getInt`, `getObject`, `getArray`.
+- [ ] **Option/Result**: Implement monadic helpers (`map`, `flatMap`, `unwrapOr`).
 
 ### Task 4.2: Host Runtime (C)
 **Goal**: Extend `mqjs` to boot the environment.
@@ -234,7 +266,7 @@ function checkEffects(expr: Expr): Set<string> {
 **Acceptance Criteria**:
 - [ ] Creates a JS Context.
 - [ ] Loads the compiled bytecode.
-- [ ] **Resource Limits**: Configure `JS_SetMemoryLimit` and `JS_SetInterruptHandler` (for CPU/Timeout) per Spec Section 6.4.
+- [ ] **Resource Limits**: Configure `JS_SetMemoryLimit`, `JS_SetInterruptHandler` (for CPU/Timeout), and handle Allocation limits.
 - [ ] **Module Loader**: Implement `JS_SetModuleLoaderFunc` to resolve and load dependency `.bin` files from disk (Spec Section 5.5).
 - [ ] **Router**: Implement logic to map incoming HTTP requests (Method/Path) to the correct Bytecode file (Spec Section 5.5).
 - [ ] **Security**: Read the bytecode's Effect Manifest (`__meta`) and inject *only* the declared effects.
@@ -244,10 +276,10 @@ function checkEffects(expr: Expr): Set<string> {
 **Goal**: Implement the "dirty" side of effects.
 **Dependencies**: 4.2
 **Acceptance Criteria**:
-- [ ] `time` effect: Binds to C `gettimeofday`.
-- [ ] `random` effect: Binds to C CSPRNG.
-- [ ] `log` effect: Binds to C `printf` (structured).
-- [ ] `http` effect: Binds to simple HTTP client/server stub.
+- [ ] `time` effect: `now`, `unixMillis`.
+- [ ] `random` effect: `int`, `bytes`.
+- [ ] `log` effect: `info`, `warn`, `error`.
+- [ ] `http` effect: `getHeader`, `setHeader`, `json`, `text`, `status`.
 
 ---
 
@@ -258,6 +290,7 @@ function checkEffects(expr: Expr): Set<string> {
 **Dependencies**: 3.3, 5.0 (Stdlib)
 **Acceptance Criteria**:
 - [ ] `mkc input.mk -o output.bin` works.
+- [ ] `mkc --openapi output.json` works (runs Task 3.4).
 - [ ] Implements **File System Resolution** for imports.
 - [ ] Invokes internal JS emitter -> invokes `mqjs -o` (bytecode flag) -> outputs bytecode.
 - [ ] **Error Reporting**: Outputs errors in JSON/Format defined in Spec Section 10.
@@ -270,3 +303,5 @@ function checkEffects(expr: Expr): Set<string> {
 - [ ] Harness runs: Source -> `mkc` -> Bytecode -> `mqjs` -> Output.
 - [ ] Includes "The Rect Test" (from Tutorial).
 - [ ] Verifies all Tier-0 libraries work in the VM.
+- [ ] Verifies resource limits (infinite recursion throws E8003, memory limit throws E8002).
+- [ ] Verifies overflow checks (INT_MAX + 1 throws runtime error).
